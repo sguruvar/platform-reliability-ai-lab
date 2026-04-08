@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadgen
+  namespace: demo-stateful-hpa
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: fortio
+          image: fortio/fortio:1.62.0
+          args:
+            - load
+            - -t
+            - 6m
+            - -c
+            - "50"
+            - -qps
+            - "0"
+            - http://demo-worker.demo-stateful-hpa.svc.cluster.local/

@@ -1,0 +1,11 @@
+%%{init: {"theme":"neutral","flowchart":{"curve":"linear"}} }%%
+flowchart LR
+  %% "Business flow" without Kubernetes jargon
+  A[Traffic generator\nsimulated users] -->|HTTP requests| B[Request router\nsingle stable endpoint]
+  B --> C[Worker pool\nserves requests]
+  C -->|CPU rises| D[Autoscaling decision\nadd more workers]
+  D --> C
+  C --> E[Per-worker local disk\nbuffer / checkpoint / spool]
+  C --> F[Metrics stream\nrequest rate, latency, CPU]
+  F --> G[Metrics store]
+  G --> H[Dashboards\nsee graphs move]

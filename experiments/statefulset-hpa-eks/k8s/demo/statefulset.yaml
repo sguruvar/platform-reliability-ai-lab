@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-worker-headless
+  namespace: demo-stateful-hpa
+spec:
+  clusterIP: None
+  selector:
+    app: demo-worker
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-worker
+  namespace: demo-stateful-hpa
+spec:
+  selector:
+    app: demo-worker
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: demo-worker
+  namespace: demo-stateful-hpa
+spec:
+  serviceName: demo-worker-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-worker
+  template:
+    metadata:
+      labels:
+        app: demo-worker
+    spec:
+      terminationGracePeriodSeconds: 20
+      initContainers:
+        - name: seed-content
+          image: public.ecr.aws/docker/library/busybox:1.36
+          command:
+            - sh
+            - -ceu
+            - |
+              mkdir -p /data
+              if [ ! -f /data/index.html ]; then
+                echo "<html><body><h1>hello from $(hostname)</h1><p>created: $(date -Iseconds)</p></body></html>" > /data/index.html
+              fi
+              echo "$(hostname)" > /data/podname.txt
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: nginx
+          image: public.ecr.aws/docker/library/nginx:1.27-alpine
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/nginx/html
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: ebs-gp3
+        resources:
+          requests:
+            storage: 4Gi

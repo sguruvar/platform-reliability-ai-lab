@@ -1,0 +1,24 @@
+%%{init: {"theme":"neutral"} }%%
+sequenceDiagram
+  autonumber
+  participant Fortio as Fortio loadgen
+  participant Svc as Service demo-worker
+  participant Pods as Nginx pods StatefulSet
+  participant MS as Metrics Server
+  participant HPA as HPA
+  participant Karp as Karpenter
+  participant Node as EC2 nodes
+  participant EBS as EBS CSI / EBS
+  participant AMP as AMP/AMG
+
+  Fortio->>Svc: Burst HTTP requests
+  Svc->>Pods: Load-balance to available pods
+  Pods-->>MS: CPU/memory usage observed
+  MS-->>HPA: CPU metrics available
+  HPA->>Pods: Increase replicas (1 → N)
+  Pods-->>Karp: New pods Pending (no capacity)
+  Karp->>Node: Provision new node(s)
+  Node-->>Pods: Scheduler places pods
+  EBS->>Pods: Provision & attach gp3 PVC per replica
+  Pods-->>AMP: Prometheus scrape → remote_write to AMP
+  AMP-->>AMP: AMG dashboards update (graphs move)

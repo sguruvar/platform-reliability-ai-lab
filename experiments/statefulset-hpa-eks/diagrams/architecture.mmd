@@ -1,0 +1,36 @@
+%%{init: {"theme":"neutral","flowchart":{"curve":"basis"}} }%%
+flowchart LR
+  %% High-level architecture for the demo
+  subgraph DemoNS["Namespace: demo-stateful-hpa"]
+    F[Fortio\nloadgen Job]
+    SVC[Service\n demo-worker :80]
+    SS[StatefulSet<br/>demo-worker nginx<br/>replicas 1-5]
+    PVC[EBS gp3 PVC<br/>per replica RWO]
+    F -->|HTTP| SVC
+    SVC --> SS
+    SS --- PVC
+  end
+
+  subgraph ControlPlane["Kubernetes control plane"]
+    MS[Metrics Server]
+    HPA[HPA\navg CPU 60%]
+    MS --> HPA
+    HPA --> SS
+  end
+
+  subgraph NodeScale["Node scaling"]
+    K[Karpenter controller]
+    N[EC2 nodes]
+    K -->|provisions| N
+  end
+
+  SS -. unschedulable .-> K
+  N --> SS
+
+  subgraph Observability["Observability"]
+    P[Prometheus\nkube-prometheus-stack]
+    AMP[Amazon Managed Prometheus\nAMP]
+    AMG[Amazon Managed Grafana\nAMG]
+    P -->|remote_write| AMP
+    AMG -->|PromQL query| AMP
+  end
