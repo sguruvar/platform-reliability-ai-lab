@@ -1,0 +1,6 @@
+{
+  "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+  "gpu_memory_utilization": 0.5,
+  "enforce_eager": true
+}
+

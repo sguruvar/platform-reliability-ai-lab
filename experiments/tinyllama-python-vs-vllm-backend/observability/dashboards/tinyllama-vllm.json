@@ -1,0 +1,207 @@
+{
+  "uid": "tinyllama-vllm",
+  "title": "TinyLlama vLLM (AMP)",
+  "tags": ["tinyllama", "triton", "vllm", "amp"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "job",
+        "type": "constant",
+        "label": "job",
+        "query": "triton",
+        "hide": 2
+      },
+      {
+        "name": "instance",
+        "type": "constant",
+        "label": "instance",
+        "query": "tinyllama-triton-vllm-metrics.tinyllama.svc.cluster.local:8002",
+        "hide": 2
+      },
+      {
+        "name": "model",
+        "type": "constant",
+        "label": "model",
+        "query": "tinyllama_vllm",
+        "hide": 2
+      },
+      {
+        "name": "gpu_usd_per_hour",
+        "type": "constant",
+        "label": "GPU $/hr (edit in dashboard JSON)",
+        "query": "1.006",
+        "hide": 0
+      }
+    ]
+  },
+  "links": [
+    {
+      "title": "Jaeger UI (internal)",
+      "url": "http://internal-a49065c7705dd4af38921167a7fd827e-936911889.us-east-1.elb.amazonaws.com:16686",
+      "type": "link",
+      "icon": "external link",
+      "targetBlank": true
+    }
+  ],
+  "panels": [
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Generate RPS (success)",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [{ "refId": "A", "expr": "sum(rate(nv_inference_request_success{job=\"$job\",instance=\"$instance\",model=\"$model\"}[1m]))" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "horizontal", "textMode": "value" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 }, "overrides": [] }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "GPU util (%)",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [{ "refId": "A", "expr": "avg(nv_gpu_utilization{job=\"$job\",instance=\"$instance\"}) * 100" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "horizontal", "textMode": "value" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Prompt tokens/s",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [{ "refId": "A", "expr": "sum(rate(vllm:prompt_tokens_total{job=\"$job\",instance=\"$instance\",model=\"$model\"}[1m]))" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "horizontal", "textMode": "value" },
+      "fieldConfig": { "defaults": { "unit": "ops", "min": 0 }, "overrides": [] }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Gen tokens/s",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [{ "refId": "A", "expr": "sum(rate(vllm:generation_tokens_total{job=\"$job\",instance=\"$instance\",model=\"$model\"}[1m]))" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "horizontal", "textMode": "value" },
+      "fieldConfig": { "defaults": { "unit": "ops", "min": 0 }, "overrides": [] }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Est. $/hr (GPU only)",
+      "gridPos": { "x": 16, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [{ "refId": "A", "expr": "count(nv_gpu_utilization{job=\"$job\",instance=\"$instance\"}) * $gpu_usd_per_hour" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "horizontal", "textMode": "value" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "min": 0 }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "GPU utilization (%)",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [{ "refId": "A", "expr": "nv_gpu_utilization{job=\"$job\",instance=\"$instance\"} * 100" }],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "GPU memory used (GiB)",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [{ "refId": "A", "expr": "nv_gpu_memory_used_bytes{job=\"$job\",instance=\"$instance\"} / 1024 / 1024 / 1024" }],
+      "fieldConfig": { "defaults": { "unit": "gbytes" }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Tokens/s (prompt + generation)",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [
+        { "refId": "A", "legendFormat": "prompt_tokens/s", "expr": "sum(rate(vllm:prompt_tokens_total{job=\"$job\",instance=\"$instance\",model=\"$model\"}[1m]))" },
+        { "refId": "B", "legendFormat": "gen_tokens/s", "expr": "sum(rate(vllm:generation_tokens_total{job=\"$job\",instance=\"$instance\",model=\"$model\"}[1m]))" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops", "min": 0 }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Time to first token (s): p50/p95",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "p50",
+          "expr": "histogram_quantile(0.50, sum(rate(vllm:time_to_first_token_seconds_bucket{job=\"$job\",instance=\"$instance\",model=\"$model\"}[5m])) by (le))"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "p95",
+          "expr": "histogram_quantile(0.95, sum(rate(vllm:time_to_first_token_seconds_bucket{job=\"$job\",instance=\"$instance\",model=\"$model\"}[5m])) by (le))"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Time per output token (s): p50/p95",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "p50",
+          "expr": "histogram_quantile(0.50, sum(rate(vllm:time_per_output_token_seconds_bucket{job=\"$job\",instance=\"$instance\",model=\"$model\"}[5m])) by (le))"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "p95",
+          "expr": "histogram_quantile(0.95, sum(rate(vllm:time_per_output_token_seconds_bucket{job=\"$job\",instance=\"$instance\",model=\"$model\"}[5m])) by (le))"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "End-to-end request latency (s): p50/p95",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "p50",
+          "expr": "histogram_quantile(0.50, sum(rate(vllm:e2e_request_latency_seconds_bucket{job=\"$job\",instance=\"$instance\",model=\"$model\"}[5m])) by (le))"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "p95",
+          "expr": "histogram_quantile(0.95, sum(rate(vllm:e2e_request_latency_seconds_bucket{job=\"$job\",instance=\"$instance\",model=\"$model\"}[5m])) by (le))"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] }
+    }
+  ]
+}
+

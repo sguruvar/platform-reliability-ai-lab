@@ -1,0 +1,195 @@
+{
+  "uid": "tinyllama-compare",
+  "title": "TinyLlama Compare: HF vs vLLM (AMP)",
+  "tags": ["tinyllama", "triton", "compare", "amp"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      { "name": "job", "type": "constant", "label": "job", "query": "triton", "hide": 2 },
+      { "name": "target_rps", "type": "textbox", "label": "target_rps", "query": "10", "hide": 0, "current": { "selected": true, "text": "10", "value": "10" } },
+      { "name": "decode_tokens", "type": "textbox", "label": "tokens_per_request", "query": "32", "hide": 0, "current": { "selected": true, "text": "32", "value": "32" } },
+      {
+        "name": "ensemble_instance",
+        "type": "constant",
+        "label": "ensemble_instance",
+        "query": "tinyllama-triton-hf-metrics.tinyllama.svc.cluster.local:8002",
+        "hide": 2
+      },
+      {
+        "name": "vllm_instance",
+        "type": "constant",
+        "label": "vllm_instance",
+        "query": "tinyllama-triton-vllm-metrics.tinyllama.svc.cluster.local:8002",
+        "hide": 2
+      },
+      { "name": "ensemble_model", "type": "constant", "label": "ensemble_model", "query": "tinyllama_hf", "hide": 2 },
+      { "name": "vllm_model", "type": "constant", "label": "vllm_model", "query": "tinyllama_vllm", "hide": 2 }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Sequences/s (success): HF vs vLLM",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "HF sequences/s",
+          "expr": "sum(rate(nv_inference_request_success{job=\"$job\",instance=\"$ensemble_instance\",model=\"$ensemble_model\"}[1m]))"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "vLLM sequences/s",
+          "expr": "sum(rate(nv_inference_request_success{job=\"$job\",instance=\"$vllm_instance\",model=\"$vllm_model\"}[1m]))"
+        },
+        {
+          "refId": "C",
+          "legendFormat": "target sequences/s",
+          "expr": "0 * sum(rate(up{job=\"$job\"}[1m])) + $target_rps"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "min": 0 },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "HF sequences/s" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "vLLM sequences/s" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "target sequences/s" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Latency (ms): HF avg request vs vLLM p95 per output token",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "HF avg request (ms)",
+          "expr": "(sum(rate(nv_inference_request_duration_us{job=\"$job\",instance=\"$ensemble_instance\",model=\"$ensemble_model\"}[5m])) / clamp_min(sum(rate(nv_inference_request_success{job=\"$job\",instance=\"$ensemble_instance\",model=\"$ensemble_model\"}[5m])), 1e-9)) / 1000"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "vLLM p95 per token (ms)",
+          "expr": "1000 * histogram_quantile(0.95, sum(rate(vllm:time_per_output_token_seconds_bucket{job=\"$job\",instance=\"$vllm_instance\",model=\"$vllm_model\"}[5m])) by (le))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "min": 0 },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "HF avg request (ms)" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "vLLM p95 per token (ms)" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "GPU utilization (%)",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "HF GPU",
+          "expr": "avg(nv_gpu_utilization{job=\"$job\",instance=\"$ensemble_instance\"}) * 100"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "vLLM GPU",
+          "expr": "avg(nv_gpu_utilization{job=\"$job\",instance=\"$vllm_instance\"}) * 100"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "min": 0, "max": 100 },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "HF GPU" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "vLLM GPU" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Tokens/s: HF (estimated) vs vLLM",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "dfhatqnofx0jkd" },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "HF tokens/s (est)",
+          "expr": "sum(rate(nv_inference_request_success{job=\"$job\",instance=\"$ensemble_instance\",model=\"$ensemble_model\"}[1m])) * $decode_tokens"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "vLLM gen tokens/s",
+          "expr": "sum(rate(vllm:generation_tokens_total{job=\"$job\",instance=\"$vllm_instance\",model=\"$vllm_model\"}[1m]))"
+        },
+        {
+          "refId": "C",
+          "legendFormat": "target tokens/s",
+          "expr": "0 * sum(rate(up{job=\"$job\"}[1m])) + ($target_rps * $decode_tokens)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "min": 0 },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "HF tokens/s (est)" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "vLLM gen tokens/s" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "purple" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "target tokens/s" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
+      }
+    }
+  ]
+}
+
